@@ -719,9 +719,9 @@ public class Matrix {
 
     public static void main(String[] args) {
 
-        int[][] matrix = new int[][] {{1,3,4},{2,4,6},{3,5,7}};
+        // int[][] matrix = new int[][] {{1,3,4},{2,4,6},{3,5,7}};
 
-        find(matrix, 3,3,5);
+        // find(matrix, 3,3,5);
     }
 }
 
