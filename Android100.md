@@ -2712,7 +2712,7 @@ IPC：进程间通信
 # 7. Android Binder机制？
 
 ## 什么是Binder？
->Binder是一种进程间通信的方式，还可以理解为一种虚拟的物理设备，设备驱动是/dev/binder，从framework层讲，Binder是ServiceManager是XXXManager和XXXManagerService之间的桥梁，从应用角度来讲，Binder是客户端和服务端进行通信的媒介，bindService时，服务端会返回一个包含了服务端提供的服务或数据，这里的服务包括普通服务和基于AIDL的服务。
+>Binder是一种进程间通信的方式，还可以理解为一种虚拟的物理设备，设备驱动是/dev/binder，从framework层讲，Binder是ServiceManager连接各种XXXManager和XXXManagerService之间的桥梁，从应用角度来讲，Binder是客户端和服务端进行通信的媒介，bindService时，服务端会返回一个包含了服务端提供的服务或数据，这里的服务包括普通服务和基于AIDL的服务。
 
 从系统角度讲，Binder机制分为Java Binder/Native Binder/Kernel Binder。
 用户空间和内核空间是隔离的，用户空间想要访问内核空间就必须通过系统调用，copy_from_user 和 copy_to_user 。
