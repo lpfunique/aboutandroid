@@ -2636,30 +2636,7 @@ onTouchEvent 事件处理：
 
 ![](./images/WMS职责.png)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	# 5. Android Binder原理？
  
-
 
 # 6. Android 中常见的IPC机制都有哪些？
 
@@ -3466,6 +3443,7 @@ Ashmem与Binder一样，都是通过驱动的形式存在于Linux内核中，Ash
  # 14. Android ContextImpl都做了哪些事情？
  # 15. Android 的渲染机制是什么样的？如何绘制界面的？
  # 16. Android SurfaceView 和TextureView 的区别是什么？
+ 
  # 17. Android SurfaceView的双缓存机制是什么样的？
  # 18. Android SurfaceFlinger 原理是什么？
  # 19. Android 自定义View怎么实现？Canvas和Paint的使用方法？
@@ -3573,3 +3551,12 @@ vectorDrawables.useSupportLibrary = true
  # 96. 微信MMKV原理与实现？
  # 97. SparseArray 和 ArrayMap 的好处是什么？
  # 98. 项目中遇到过哪些问题？怎样处理的？
+ # 99. 如何理解SystemServer/SystemService/SystemServiceManager/ServiceManager的关系
+ - ServiceManager是有init进程创建并启动的
+   - 在SystemServer中启动的服务，在ServiceManager中注册的是用于进程间通信的
+   - 而用于system_server进程内部通信的则注册到LocalServices中，LocalServices中都是静态方法。
+   - （如AMS会把相关内部类的实例注册到LocalServices中，提供systemServer进程内部其他服务操作AMS接口，而给其他进程调用的接口封装成一个Binder类，注册到ServiceManager中）
+ - SystemServer是一个final的类，是由Zynote进程fork出来的第一个进程。其中WMS和AMS等重要的可以binder通信的服务都运行在SystemServer进程中。AMS和WMS这些繁忙的服务运行在单独的线程中，不忙的服务并没有单独开一个线程，有些服务会注册到ServiceManager中。
+ - SystemService是一个抽象类。这个抽象类有一个onStart的方法。
+ - SystemServiceManager是一个创建、启动并管理实例的生命周期的类，这些实例必须实现SystemService接口。在SystemServer中调用SystemServiceManager的startService方法就是通过调用onStart方法来启动实例的。在SystemServiceManager中启动的服务，如果需要注册到ServiceManager中，则需要通过publishBinderService来完成。
+
