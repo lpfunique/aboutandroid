@@ -3468,6 +3468,39 @@ Ashmem与Binder一样，都是通过驱动的形式存在于Linux内核中，Ash
  # 38. Android Activity 的启动模式是怎样的？
  # 39. Android Notification 的原理是什么？
  # 40. Android Mvp Mvvm Mvc 区别是什么？
+
+MVC（Model/View/Controller）: 模型-视图-控制器
+    Model: 通常模型对象负责在数据库中存取数据。
+    View: 通常依据模型数据显示数据。
+    Controller: 通常控制器负责从视图读取数据，控制用户输入，并向模型发送数据。
+
+    优点: 视图层和业务层分离，耦合性低，逻辑简单。
+    缺点: 控制器代码量过于庞大，MVC模式的逻辑大都集中在Controller中。
+
+    Controller层是控制层，在Controller层会接收用户所有的操作，并根据逻辑触发Model层和View层。
+    Controller层触发View层，并不会更新View层中的数据，View层中的数据是通过监听Model层数据的变化自动更新的，与Controller层无关
+MVP（Model/View/Presenter）: 从MVC发展而来
+    MVP中View层不能再直接访问Model层，必须通过Presenter层提供的接口，通过Presenter层来访问Model。
+
+    优点: 模型与视图完成分离，修改视图不影响模型
+    缺点: 对视图的渲染放在了Presenter中，View层与Model层的交互都需要经过Presenter层，定义的类比较多
+
+MVVM（Model/View/ViewModel）
+    VM是ViewModel层，ViewModel层把Model层和View层的数据同步自动化了，解决了MVP框架中数据同步比较麻烦的问题，
+    ViewModel层双向绑定了View层和Model层，View层数据的变化会自动修改Model层数据，反之同理。
+    MVP中的Presenter需要手动写方法来调用或修改View层和Model层。
+    MVVM没有Controller层也没有Presenter层，有的是一个绑定器，绑定器在视图和模型之间通信。
+
+    如何理解双向绑定？
+    双向数据绑定是一个模板引擎，会根据数据的变化实时渲染，View层和Model层的修改会同步给对方。
+   
+    优点: 
+        低耦合，视图可以独立于Model变化和修改，一个ViewModel可以绑定不同的View上。
+        可重用性，可以把一些视图逻辑放在一个ViewModel中，让很多View重用这段视图逻辑。
+        独立开发，开发人员可以专注于业务逻辑和数据的开发。
+
+
+
  # 41. Android 注解的应用？都有哪些注解？
  # 42. Android 数据库都有哪些？区别是什么？
  # 43. Android 如何实现推送功能？原理是什么？
