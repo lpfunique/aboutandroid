@@ -3488,6 +3488,9 @@ MVP（Model/View/Presenter）: 从MVC发展而来
 MVVM（Model/View/ViewModel）
     VM是ViewModel层，ViewModel层把Model层和View层的数据同步自动化了，解决了MVP框架中数据同步比较麻烦的问题，
     ViewModel层双向绑定了View层和Model层，View层数据的变化会自动修改Model层数据，反之同理。
+    - ViewModel的一个重要作用就是帮助Activity分担一部分工作，它是专门用于存放于界面相关的数据的，也就是说与界面上的数据相关的变量应该
+    存放在ViewModel中，而不是Activity中。
+    - ViewModel的声明周期与Activity不同，只有当Activity退出的时候，ViewModel才会销毁。
     MVP中的Presenter需要手动写方法来调用或修改View层和Model层。
     MVVM没有Controller层也没有Presenter层，有的是一个绑定器，绑定器在视图和模型之间通信。
 
@@ -3574,9 +3577,64 @@ vectorDrawables.useSupportLibrary = true
  # 86. 如何避免内存泄露？都有哪些场景？使用哪些工具？
  # 87. LeakCanary的原理是什么？
  # 88. Kotlin 如何理解函数式编程？
+    函数式编程中一切皆函数。
+    函数式编程的特点：
+    1. 函数是第一等公民：把函数当成一种数据类型来使用，可以赋值给其他变量，可以当成参数传入另一个函数，也可以作为别的函数的返回值。
+    2. 函数是纯函数：相同的输入总会得到相同的输出结果
+    ```
+    // 赋值
+    var fun1 = function fun1(){}
+
+    // 当成参数
+    function func2(fn) {
+        fn()
+    }
+
+    // 当成返回值使用
+    function func3() {
+        return function (){}
+    }
+    ```
  # 89. Kotlin 协程是什么？比线程有哪些优势？如何理解挂起的概念？
  # 90. Kotlin lambda编程？
  # 91. Kotlin 高阶函数？内联函数？
+    ## 什么是高阶函数？
+    - 函数作为参数被传递
+    - 函数作为返回值输出
+
+    ## 什么是内联函数？
+    简单说，被inline标注后的函数，在调用它时，会把这个函数方法体中所有代码移动到调用的地方，而不是通过方法间的压栈进栈方式。
+    也可理解为：在编译期间，把调用这个函数的地方用这个函数的方法体进行替换。
+
+    inline在一般的方法上标注，并不会有很大的作用，inline能带来性能提升的，往往是在参数是lambda的函数上。
+    ``` Java
+    // 不建议使用inline
+    private inline fun testInline() {
+        print("test inline")
+    }
+
+    // 不建议使用inline
+    private inline fun testInline(test: String) {
+        print(test)
+    }
+
+    private fun test(body: () -> Unit) {
+        testInline2(body)
+    }
+    // 建议使用inline
+    private inline fun testInline2(block: () -> Unit) {
+        block.invoke()
+    }
+
+    ```
+    inline的使用规则是什么？
+    - 不带参数，或者带有普通参数的函数，不建议使用inline
+    - 带有lambda函数参数的函数，建议使用inline
+
+    使用inline函数提升效率的原因？
+    不适用inline的话，编译过程中，lambda参数会多出来类，会增加内存的分配。
+    
+
  # 92. Kotlin DSL是什么？
  # 93. 如何理解Kotlin的属性委托？
  # 94. Kotlin的类都有哪些分类？区别是什么？
@@ -3592,4 +3650,42 @@ vectorDrawables.useSupportLibrary = true
  - SystemServer是一个final的类，是由Zynote进程fork出来的第一个进程。其中WMS和AMS等重要的可以binder通信的服务都运行在SystemServer进程中。AMS和WMS这些繁忙的服务运行在单独的线程中，不忙的服务并没有单独开一个线程，有些服务会注册到ServiceManager中。
  - SystemService是一个抽象类。这个抽象类有一个onStart的方法。
  - SystemServiceManager是一个创建、启动并管理实例的生命周期的类，这些实例必须实现SystemService接口。在SystemServer中调用SystemServiceManager的startService方法就是通过调用onStart方法来启动实例的。在SystemServiceManager中启动的服务，如果需要注册到ServiceManager中，则需要通过publishBinderService来完成。
+  
+  # 100. Kotlin 的also/with/apply/run/let 的区别是什么？
+  - 这五个扩展函数无非就是接收者和返回值不同。
+  - with/T.run/T.apply 接收者是this；T.let/T.also接收者是it
+  - with/T.run/T.let 返回值是作用域最后一个对象this; T.apply/T.also返回值是调用者本身itself
+  
+  ## let /run /with 返回最后一行的值
+  ``` 
+  object.let {
+      it.todo()   // 必须要使用it(名称可换), 最后一行为返回值类型
+  }
+  object?.let {
+      it.todo()
+  }
+  ```
+  ```
+  with(object) {
+      todo()     // 最后一行为返回值类型
+  }
+  ```
+  ```
+  object.run {
+      todo()    // run是let和with的结合体
+      result    // 返回最后一行代码的值
+  }
+  ```
+  ## apply/also 返回对象本身
+  ```
+  object.apply { // 跟run不同的就是返回值不同
+      todo()    // apply传入对象本身，返回值也是本身object
+  }
+  ```
+  ```
+  object.also {
+      todo()   // 跟let不同的是返回值不一样，also返回的是本身object   
+  }
+  ```
+  ![](.image/../images/Kotlin5种扩展函数区别2.png)
 
