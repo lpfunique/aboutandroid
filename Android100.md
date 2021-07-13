@@ -3568,6 +3568,7 @@ vectorDrawables.useSupportLibrary = true
  # 77. APT编译时注解的原理是什么？常见的都有哪些？
  # 78. Java线程池的工作原理？
  # 79. Java线程都有哪些状态？
+ 
  # 80. 使用过的并发库都有哪些？
  # 81. Java类的结构对象？
  # 82. Https和Http的区别是什么？
@@ -3575,7 +3576,40 @@ vectorDrawables.useSupportLibrary = true
  # 84. 项目中遇到过哪些问题？
  # 85. 如何进行换肤操作？
  # 86. 如何避免内存泄露？都有哪些场景？使用哪些工具？
+
  # 87. LeakCanary的原理是什么？
+以LeakCanary 2.7 为例来讲解：
+首先，什么是内存泄漏？
+在Java运行环境中，内存泄漏指的是应用持有一个不再使用的对象引用，不对其进行释放。为该对象分配的内存无法被回收，最终会导致OOM。
+LeakCanary工作步骤：
+1. Detecting retained objects(检测存活的对象)
+2. Dumping the heap (对堆内存进行保存处理)
+3. Analyzing the heap (分析堆内存)
+4. Categorizing leaks (对泄漏分类)
+
+# Detecting retained objects
+LeakCanary依赖Android的lifecycle来自动监测activities和fragments的destroyed方法调用时应该被垃圾收集器回收的情况。
+这些要销毁的对象会被传给ObjectWatcher,ObjectWatcher持有这些对象的weak references。
+LeakCanary可以自动检测以下对象：
+- destroyed Activity instances
+- destroyed Fragment instances
+- destroyed fragment View instances
+- cleared ViewModel instances
+
+还可以通过调用watch方法来检测任何对象
+AppWatcher.object.watch(myDetachedView, "View was detached")
+
+如果ObjectWatcher持有的weakreference在运行gc后5秒没有被清除，这个被观察的对象仍然存活，那么可能存在内存泄漏。
+# Dumping the heap
+当保留的对象个数超过一定的阈值，LeakCanary会把java的堆内存dump到一个.hprof文件中
+# Analyzing the heap
+LeakCanary会使用Shark来解析hprof文件，定位存活的对象。
+Shark是一个kotlin library，Shark为LeakCanary2提供内存分析器。
+对于每一个retained对象，LeakCanary会寻找这个对象的引用路径，查看是哪里的引用阻止了其被回收。
+# Categorizing leaks
+LeakCanary 会把找到的泄漏分为两类：自身应用的和三方库的。
+
+
  # 88. Kotlin 如何理解函数式编程？
     函数式编程中一切皆函数。
     函数式编程的特点：
