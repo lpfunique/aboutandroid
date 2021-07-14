@@ -3564,11 +3564,121 @@ vectorDrawables.useSupportLibrary = true
  # 73. 如何实现动态代理？
  # 74. Java 虚拟机的运行时是怎么分布的？JMM的内存分布是什么？
  # 75. Java 垃圾回收机制的是什么？都有哪些垃圾回收的方法？
+ 
  # 76. Java的中引用方式？
  # 77. APT编译时注解的原理是什么？常见的都有哪些？
  # 78. Java线程池的工作原理？
+ 线程池是一种基于池化技术的思想来管理线程的工具，在线程池中维护了多个线程，通过对线程的复用，减少频繁创建和销毁线程的开销。
+ 线程池的分类：FixedThreadPool/CachedThreadPool/ScheduledThreadPool/SingleThreadExecutor
+ 线程池的基本用法
+ ```Java
+ // 创建线程的工厂
+        ThreadFactory factory = new ThreadFactory() {
+            final AtomicInteger count = new AtomicInteger();
+
+            @Override
+            public Thread newThread(@NotNull Runnable r) {
+                return new Thread(r, "Thread #" + count.getAndIncrement());
+            }
+        };
+
+        ThreadPoolExecutor executor = new ThreadPoolExecutor(
+                // 核心线程数，默认情况下会一直存活，如果设置了allowCoreThreadTimeOut设置为true，由keepAliveTime控制
+                3,
+                // 线程池最大线程数，达到这个数值后，新任务会被阻塞
+                10,
+                // 默认指非核心线程的闲置超时时长
+                60,
+                TimeUnit.SECONDS,
+                // 线程池的任务队列，通过线程池的execute方法提交的Runnable对象超过核心线程数后会存储在这个参数中
+                new LinkedBlockingQueue<Runnable>(128),
+                // 线程工厂
+                factory
+                // 还有rejectedExecutionHandler
+        );
+
+        // 运行一个新的线程
+        executor.execute(()->{
+
+        });
+
+        // 线程池关闭
+        executor.shutdown();
+        executor.shutdownNow();
+
+        // 测试1
+        for (int i = 0; i < 3; i++) {
+            executor.execute(()->{
+                try {
+                    while(true){
+                        Thread.sleep(1000);
+                        System.out.println("sleep 1000" + Thread.currentThread().getName());
+
+                        // 此时队列中个数为0
+                        System.out.println(executor.getQueue().size());
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            });
+        }
+
+        // 测试2
+        for (int i = 0; i < 4; i++) {
+            executor.execute(()->{
+                try {
+                    while(true){
+                        Thread.sleep(1000);
+                        System.out.println("sleep 1000" + Thread.currentThread().getName());
+
+                        // 此时队列中个数为1
+                        System.out.println(executor.getQueue().size());
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            });
+        }
+
+        // 测试3
+        for (int i = 0; i < 14; i++) {
+            executor.execute(()->{
+                try {
+                    while(true){
+                        Thread.sleep(1000);
+                        System.out.println("sleep 1000" + Thread.currentThread().getName());
+
+                        // 此时队列中个数为11
+                        System.out.println(executor.getQueue().size());
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            });
+        }
+ ```
+
  # 79. Java线程都有哪些状态？
- 
+ 线程6个状态：New / Runnable/ Blocked/ Waiting/ Timed_Waiting/ Terminated
+ ```Java
+ public enum State {
+     // 未启动的状态
+     NEW,     
+     // 正在运行的状态          
+     RUNNABLE,      
+     // 正在等待一个monitor lock去进入一个synchronized块/方法或者重进入synchronize块在调用Object.wait方法后   
+     BLOCKED,       
+     // 调用后Object.wait (with no timeout)/ Thread.join (with no timeout)/ LockSupport.park后处于这个状态
+     // 比如一个线程调用某个对象的Object.wait()，该对象正在等待其他线程调用该对象的Object.notify()/notifyAll()方法。
+     // 或者一个线程调用Thread.join后正在等待指定线程的终结
+     WAITING,          
+     // 线程等待一个特定的时间，Thread.sleep / Object.wait(with timeout)/ Thread.join( with timeout)
+     // LockSupport.parkNanos / LockSupport.parkUntil
+     TIMED_WAITING,
+     // 线程终结
+     TERMINATED;
+ }
+ ```
  # 80. 使用过的并发库都有哪些？
  # 81. Java类的结构对象？
  # 82. Https和Http的区别是什么？
