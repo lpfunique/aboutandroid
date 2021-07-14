@@ -3548,7 +3548,80 @@ vectorDrawables.useSupportLibrary = true
  # 57. Flutter 的核心思想是什么？
  # 58. Gradle 核心思想，自定一个AndroidStudio插件？
  # 59. Dalivk和Art虚拟机的区别是什么？
- # 60. HashMap的原理是什么？为什么不安全？
+ # 60. HashMap的原理是什么？为什么不安全？ 
+ 1.7版本：
+ Table数组+Entry链表
+ 1.8版本：
+ Table数组+Entry链表/红黑树
+ 变量参数：
+ - Table数组默认初始化长度为 16 
+ - Table数组的最大长度为 1<<30 2^30次
+ - 默认负载因子为0.75，扩容时数组扩容到原来的两倍
+ - 链表转换成树的阈值为8. 红黑树转换成链表的阈值为6.
+  
+ ```Java
+ class HashMap {
+    
+    // table数组
+    transient Node<K,V>[] table;
+
+    // 数组中每个元素实现了Map.Entry<K,V>
+    static class Node<K,V> implements Map.Entry<K,V> {}
+ }
+ ```
+ HashMap底层数组也可以使用LinkedList来实现，效率没有数组快，ArrayList的扩容倍数是1.5倍。
+ HashMap对保存的key进行hashCode()，然后对数组长度进行取余运算，得到在数组中插入的位置。
+
+ HashMap.put()方法
+ - 对key的hashCode()做hash运算，计算index
+ - 如果没有碰撞直接放到bucket中
+ - 如果出现了碰撞，放在链表或者红黑树中
+ - 如果节点已经存在就替换oldValue（key是唯一的）
+ - 如果元素超过一定阈值，则进行扩容resize
+
+HashMap.resize()方法
+扩容机制就是将老的table数组中所有Entry取出来，重新散列到新的table中。
+
+HashMap.get()方法
+- 对key的hashCode()做hash运算，计算索引值index
+- 如果在bucket中第一个节点就命中，直接返回
+- 如果不在第一个，则在链表（O(n)）或红黑树中(O(logn))查找
+
+1.8相对于1.7，hashMap修改了什么？
+- 数组+链表 修改为 数组+链表+红黑树
+- 优化了高位运算的hash算法： h^(h>>>16)
+- 扩容后，元素的位置在原位置或者原位置移动2次幂的位置，这样就不会出现死循环问题了
+
+红黑树操作需要进行左旋、右旋、变色操作来保持平衡，当元素个数小于8时用单链表操作比较合适。
+
+HashMap的并发问题？
+- 多线程扩容时，会引起死循环问题
+- 多线程put的时候，可能会导致元素丢失
+- put非null元素后get出来的却是null
+
+HashMap的key有什么要求？
+一般来说使用Integer/String这类不可变类当做HashMap的key，String最常用，字符串在创建的时候它的hashCode就被缓存了，不需要重新计算。获取的对象要用到equals()和hashCode()方法，不可变类已经比较很好实现了这两个方法。
+如果用可变类，hashCode的值可能会变化。
+
+四个原则
+- 两个Object相同，hashCode一定相等
+- 两个Object不同，hashCode不一定不等
+- hashCode相同，两个Object不一定相等
+- hashCode不同，两个Object一定不等
+  
+如何实现一个不可变类来作为HashMap的key？
+- 使用final修饰class
+- 使用private final 修饰所有成员变量
+- 没有修改成员变量的方法
+- 通过构造器初始化所有成员，进行深拷贝
+- getter方法中返回对象的克隆
+
+
+
+
+  
+
+
  # 61. LinkedHashMap的原理是什么？
  # 62. concurrentHash的原理是什么？
  # 63. Synchronize的原理是什么？怎么保证线安全的？
@@ -3558,6 +3631,7 @@ vectorDrawables.useSupportLibrary = true
  # 67. AQS和CAS原理是什么？CAS带来的ABA问题？
  # 68. RxJava的原理是什么？
  # 69. ARouter的原理是什么？
+
  # 70. Java 是如何加载一个类文件的？都有哪些方式加载？
  # 71. Class文件加载Dex原理？
  # 72. Java SPI机制实现组件服务调用？
