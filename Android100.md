@@ -3616,14 +3616,48 @@ HashMap的key有什么要求？
 - 通过构造器初始化所有成员，进行深拷贝
 - getter方法中返回对象的克隆
 
-
-
-
-  
-
-
  # 61. LinkedHashMap的原理是什么？
+LinkedHashMap继承HashMap,实现了Map<K,V>接口。
+在HashMap中元素是无序的，而LinkedHashMap使用双端队列来存储元素，可以保证插入顺序。
+在LinkedHashMap的Entry类继承自HashMap.Entry<K,V>，在这个基础上又添加了after和before属性，分别指向下一个和上一个节点。
+accessOrder属性用于描述迭代的顺序，为true则为访问顺序，为false则为插入顺序，默认为false也就是输出的顺序为插入顺序。
+LinkedHashMap可以保证数据的有序性，但是不会对元素排序，可以使用TreeMap来对元素进行排序，
+```Java
+        Map<String, Integer> treeMap = new TreeMap<>(Comparator.naturalOrder());
+        treeMap.put("One", 1);
+        treeMap.put("Two", 2);
+        treeMap.put("Three", 3);
+        treeMap.put("Four", 4);
+        treeMap.put("Five", 5);
+
+        System.out.println("treeMap内容:");
+        for (Map.Entry<String, Integer> entry : treeMap.entrySet()) {
+            System.out.println(entry);
+        }
+
+        List<Map.Entry<String, Integer>> list = new ArrayList<>(treeMap.entrySet());
+        list.sort((o1, o2) -> o2.getValue().compareTo(o1.getValue()));
+        System.out.println("排序后treeMap内容:");
+        for (Map.Entry<String, Integer> e : list) {
+            System.out.println(e.getKey() + ":" + e.getValue());
+        }
+```
+
  # 62. concurrentHash的原理是什么？
+ jdk1.7版本使用段(Segment)来表示不同的部分，只要多个修改发生在不同的段上，他们就可以并发进行，Segment中存放的是HashEntry[]。定位一个元素需要两个hash，第一次hash定位到Segment,第二次hash定位到元素所在的链表头部。
+ jdk1.8版本降低了锁的粒度为HashEntry(首节点)。采用CAS无锁算法。
+ - concurrentHashMap中变量使用final和violatile修饰的作用？
+ final可以保证初始化安全性，让不可变对象不需要同步就能自由地被访问和共享。
+ violatile可以保证某个变量的内存改变对其他线程即使可见，在配合CAS可以实现不加锁对并发操作的支持。
+- concurrentHashMap有什么缺陷？
+  非阻塞，更新数据时不会将整个表锁住，严格来说读取操作并不是保证获取最新的更新。
+ ```Java
+     static class Segment<K,V> extends ReentrantLock implements Serializable {
+        private static final long serialVersionUID = 2249069246763182397L;
+        final float loadFactor;
+        Segment(float lf) { this.loadFactor = lf; }
+    }
+ ```
  # 63. Synchronize的原理是什么？怎么保证线安全的？
  # 64. ThreadLocal的原理是什么？
  # 65. ReentraintLock的原理是什么？
