@@ -4094,6 +4094,69 @@ person()
 
 ```
  # 93. 如何理解Kotlin的属性委托？
+ 定义一个类的属性是需要给它一个初始值的，如果不给会报错，如
+ ```Java
+ class MyPropertyClass {
+    
+    // 如果不加上lateinit延迟属性，会把报错
+    lateinit var str:String
+}
+ ```
+ 除了使用lateinit属性外，我们还可以对此属性的赋值进行委托。
+ ```Java
+ fun main(args: Array<String>) {
+    val myPropertyClass = MyPropertyClass()
+    myPropertyClass.str = "hello"
+    println(myPropertyClass.str)
+}
+
+class MyDelegate {
+
+    // thisRef: 委托的对象，property: 委托的属性
+    operator fun getValue(thisRef: Any?, property: KProperty<*>): String = "要委托的属性为${property.name}"
+    operator fun setValue(thisRef: Any?, property: KProperty<*>, value: String) {
+        println("要设置的值为$value")
+    }
+}
+ ```
+ ## 延迟属性
+ 定义：属性只有在第一次被访问的时候才会计算，之后则会将之前的计算结果缓存起来供后续使用。
+ ```Java
+    val lazyValue:Int by lazy {
+
+        println("just print first")
+        println("just print once")
+
+        // 返回结果
+        20
+    }
+
+    fun main(args: Array<String>) {
+        println(lazyValue)
+        println("*****")
+        println(lazyValue)
+    }
+ ```
+ 打印结果：
+ ```
+    just print first
+    just print once
+    20
+    *****
+    20
+ ```
+val lazyValue:Int by lazy(可以设置模式参数)
+模式参数有三种：SYNCHRONIZED/PUBLICATION/NONE
+SYNCHRONIZED: 默认情况下，延迟属性的计算是同步的，值只会在一个线程中得到计算，所有线程都会用同一个结果。
+PUBLICATION: 并发访问未初始化的Lazy实例时，可以多次调用Initializer函数，但只有返回的第一个值将用作Lazy实例的值。
+NONE: 如果确定初始化操作只会在一个线程中执行，可以减少线程安全方面的开销
+
+## 非空属性
+```Java
+    // 非空属性，适用于初始化时不知道赋什么值给它的场景,Delegates是一个对象
+    var str2 : String by Delegates.notNull<String>()
+```
+
  # 94. Kotlin的类都有哪些分类？区别是什么？
  # 95. 如何理解面向切面编程AOP？
  # 96. 微信MMKV原理与实现？
