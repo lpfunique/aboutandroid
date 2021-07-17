@@ -3975,7 +3975,57 @@ Job是协程的句柄，使用launch或async创建的每个协程都返回一个
 ```
 虽然协程有New、Cancelling、Completing状态，外部无法感知这三种状态，Job只提供了isActive、isCancelled、isCompleted属性来供外部判断协程是否处于Active、Cancelled、Completed状态。
 
+Android中使用协程的最佳做法？
+// https://developer.android.google.cn/kotlin/coroutines/coroutines-best-practices?hl=zh_cn
+- 创建新协程或调用withContext时，最好不使用Dispatchers硬编码，先定义出来再注入到使用的地方。
+- 挂起函数应该能够安全的从主线程调用
+- ViewModel应该首选创建创建协程，而不是公开挂起函数来执行业务逻辑。
+- ViewModel最好向其他类公开不可变类型。
+- 避免使用GlobalScope
+- 在业务层和数据层中创建协程
+  - 如果要完成的工作不限于特定屏幕，工作的存在时间比调用方的声明周期更长，可以使用外部CoroutineScope。externalScope 应由存在时间比当前屏幕更长的类进行创建和管理，并且可由 Application 类或作用域限定为导航图的 ViewModel 进行管理。
+  ```Java
+    class ArticlesRepository(
+        private val articlesDataSource: ArticlesDataSource,
+        private val externalScope: CoroutineScope,
+        private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
+    ) {
+        // As we want to complete bookmarking the article even if the user moves
+        // away from the screen, the work is done creating a new coroutine
+        // from an external scope
+        suspend fun bookmarkArticle(article: Article) {
+            externalScope.launch(defaultDispatcher) {
+                articlesDataSource.bookmarkArticle(article)
+            }
+                .join() // Wait for the coroutine to complete
+        }
+    }
+  ```
+
  # 90. Kotlin lambda编程？
+ ```Java
+    // 高阶函数，lambda为形参
+    fun printSum(sum: (Int, Int) -> Int) {
+        val result = sum(2, 3)
+    }
+
+    // lambda为实参，传递给printSum
+    val sum = { x: Int, y: Int -> x + y }
+    printSum(sum)
+```
+```Java
+// 带接收者的lambda表达式，当传递该lambda值时，将携带该接收者
+fun kotlinDSL(block: StringBuilder.() -> Unit) {
+    block(StringBuilder("kotlin"))
+}
+fun main(args: Array<String>) {
+    kotlinDSL {
+        // 这个lambda接收者类型为StringBuilder
+        append(" append str")
+        print(this)
+    }
+}
+```
  # 91. Kotlin 高阶函数？内联函数？
     ## 什么是高阶函数？
     - 函数作为参数被传递
@@ -4013,8 +4063,36 @@ Job是协程的句柄，使用launch或async创建的每个协程都返回一个
     使用inline函数提升效率的原因？
     不适用inline的话，编译过程中，lambda参数会多出来类，会增加内存的分配。
     
-
  # 92. Kotlin DSL是什么？
+ DSL:领域专用语言
+ Kotlin DSL所体现的代码结构有如下特点：链式调用，大括号嵌套，类似自然语言
+ Kotlin DSL背后用到的技术是：扩展函数、lambda表达式、中缀调用和invoke约定
+
+ ## 扩展函数
+ ```Java
+    // 给String类型增加一个方法
+    fun String.fistChar() :Char = this[0]
+ ```
+## Labmda表达式
+ > {x:Int, y:Int -> x+y}
+## 中缀调用
+> "key" to "value" 等价于 "key".to("value")
+```Java
+public infix fun <A, B> A.to(that: B): Pair<A, B> = Pair(this, that)
+```
+## invoke约定
+```Java
+class Person(val name:String){
+    operator fun invoke(){
+        println("my name is $name")
+    }
+}
+
+// 使用方，可以让对象像函数一样调用
+val person = Person("lpf")
+person()
+
+```
  # 93. 如何理解Kotlin的属性委托？
  # 94. Kotlin的类都有哪些分类？区别是什么？
  # 95. 如何理解面向切面编程AOP？
