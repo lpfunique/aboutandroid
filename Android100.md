@@ -3506,6 +3506,12 @@ SurfaceView支持局部更新，通过lockCanvas(Rect dirty)来指定获取画�
  # 20. Android 的动画都有哪些，实现原理是什么？
  # 21. Android 热修复实现原理，即时生效和重启生效区别是什么？
  # 22. Android 组件化和插件化区别，分别怎么实现的？
+ 模块化：根据功能、页面等划分成不同的模块，模块之间解耦。
+ 组件化：将一个apk拆分成多个独立的组件，各组件可独立编译打包，也可将组件作为lib集成到apk中。
+ 插件化：将一个apk根据业务功能拆成不同的子apk，每个子apk可独立编译打包，apk使用时，每个插件都是动态加载的，插件可以进行热修复和热更新。
+ 常见的插件化：Atlas / Replugin / VirtualAPK 
+
+
  # 23. Android 常用的设计模式都有哪些？核心思想是什么？
  # 24. Android 如何加载一张大图？
  # 25. Android Bitmap的加载和缓存机制是什么？
@@ -3850,7 +3856,113 @@ LinkedHashMap可以保证数据的有序性，但是不会对元素排序，可�
  }
  ```
  # 80. 使用过的并发库都有哪些？
- # 81. Java类的结构对象？
+ # 81. Java的反射基础？
+ 三种获取Class对象的方式
+ ```Java
+    // 第一种， 使用ClassLoader装在类，并对类进行初始化
+    Class c1= Class.forName("Test");
+    Object t1 = c1.newInstance();
+    System.out.println(((Test)t1).getString());
+
+    // 第二种，返回类对象运行时真正所指的对象、所属类型的Class对象
+    Class c2 = new Test().getClass();
+    Object t2 = c2.newInstance();
+    System.out.println(((Test)t2).getString());
+
+
+    // 第三种，ClassLoader装入内存，不对类进行类的初始化
+    Class c3 = Test.class;
+    Object t3 = c3.newInstance();
+    System.out.println(((Test)t3).getString());
+
+
+    // 有参数的构造
+    Constructor<?> csr = c1.getDeclaredConstructor(String.class, int.class);
+    Object o1 = csr.newInstance("lpf",18);
+
+    // 反射类中的属性
+    // getField : 只能获取public的，包括从父类继承来的字段
+    // getDeclaredField: 可以获取本类所有的字段，包括private以及继承来的字段
+    Field field = c1.getDeclaredField("name");
+    // 使用setAccessible取消Java的权限控制检查，特别是可以取消私有字段访问限制
+    // public 和 private修饰的属性，默认accessible属性都为false
+    field.setAccessible(true);
+    field.set(t1, "lpf");
+    System.out.println(((Test) t1).getName());
+
+    // 修改属性中的修饰符
+    Field field2 = c1.getDeclaredField("name");
+    String priv = Modifier.toString(field2.getModifiers());
+    System.out.println("打印属性修饰符" + priv);
+
+    // 反射类中的方法
+    Method m = c1.getDeclaredMethod("setName",String.class);
+    m.invoke(o1, "new invoke name");
+    System.out.println("打印setName后的结果"+((Test)o1).getName());
+
+    // 反射静态方法
+    Class clz = Class.forName("Test");
+    Method m2 = clz.getDeclaredMethod("getStaticMethod");
+    m2.invoke(null);
+
+    // 反射泛型参数方法
+    Class clzT = TestT.class;
+    // 方法中有泛型参数时，编译器会自动类型向上转型，T 向上转型是Object
+    Method m3 = clzT.getDeclaredMethod("test", Object.class);
+    m3.setAccessible(true);
+    m3.invoke(new TestT<Integer>(),1);
+
+ ```
+ 动态代理的作用？
+ 在不改变代码的情况下，增加一些方法，在方法执行前后做一些事情
+ ```Java
+    
+    // 定义接口
+    public interface Subject {
+        void doSomething();
+    }
+
+    // 具体实现类
+    public class RealSubject implements Subject{
+        @Override
+        public void doSomething() {
+            System.out.println("Real Subject do something");
+        }
+    }
+
+    // 代理类
+    public class ProxyHandler implements InvocationHandler {
+
+        private Object realSubject;
+
+        public ProxyHandler(Object realSubject) {
+            this.realSubject = realSubject;
+        }
+
+        @Override
+        public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+
+            // 在调用具体目标对象前，可以执行一些具体处理
+            System.out.println("执行具体对象前...");
+            Object result = method.invoke(realSubject, args);
+            System.out.println("执行具体对象后...");
+            return result;
+        }
+    }
+
+    // 执行
+     public static void main(String[] args) {
+        RealSubject real = new RealSubject();
+        Subject proxySubject = (Subject) Proxy.newProxyInstance(
+                Subject.class.getClassLoader(),
+                new Class[]{Subject.class},
+                new ProxyHandler(real));
+        proxySubject.doSomething();
+    }
+ ```
+
+
+
  # 82. Https和Http的区别是什么？
  Http的不足：
  - 通信使用明文(不加密)，内容可能被窃听
