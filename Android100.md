@@ -3442,9 +3442,65 @@ Ashmem与Binder一样，都是通过驱动的形式存在于Linux内核中，Ash
  # 13. Android 栈管理？
  # 14. Android ContextImpl都做了哪些事情？
  # 15. Android 的渲染机制是什么样的？如何绘制界面的？
+ Android引入Vsync的本质就是要协调app生成UI数据和SurfaceFlinger合成图像，app是数据生产者，surfaceFlinger是数据消费者，Vsync信号有连个接收器，一个是app一个是surfaceFlinger。
+几个概念：
+- HW vsync 硬件产生的vsync信号
+- SW vsync 由DispSync产生的vsync信号
+- vsync-sf SurfaceFlinger接收的vsync信号
+- vsync-app App接收到的vsync信号
+
+在Android的ViewRootImpl类中包含mView/mSurface/Choregrapher，mView代表整个控件树，mSurface代表画布，应用的UI渲染会直接放在mSurface中，Choregrapher使应用请求vsync信号，接收到信号后开始渲染流程。
+
+当某个控件调用invlidate后，最终会调用到ViewRootImpl的invalidate方法中。
+```Java
+void invalidate() { 
+ mDirty.set(0, 0, mWidth, mHeight);  
+ if (!mWillDrawSoon) {  
+  scheduleTraversals();  
+ }
+}
+```
+在scheduleTraversals方法中会调用mChoreographer.postCallback方法，应用程序请求vsync信号，收到vsync信号后会调用mTraversalRunnable
+```Java
+void scheduleTraversals() {
+ if (!mTraversalScheduled) {
+  mTraversalScheduled = true;
+  mTraversalBarrier = mHandler.getLooper().getQueue().postSyncBarrier();
+  mChoreographer.postCallback(
+   Choreographer.CALLBACK_TRAVERSAL, mTraversalRunnable, null);
+  notifyRendererOfFramePending();
+  pokeDrawLockIfNeeded();
+ }
+}
+```
+应用程序接收到vsync信号以后开始调用其measure/layout/draw流程，分别回调onMeasure/onLayout/onDraw方法，这个部分在UIThread中完成的。UIThread完成上述步骤后会绘制指令（DisplayList）同步给RenderThread，RenderThread会真正的跟GPU通信执行draw动作。
  # 16. Android SurfaceView 和TextureView 的区别是什么？
- 
+ TextureView本质上是控制一个硬件的纹理对象，刷新频率依赖ViewRootImpl，除非你是用lockCanvas的api才会通过临时的Surface直接沟通SF进程(?)。它跟普通view的绘制流程一致。
+
+- TextureView本质上就是一个View，支持移动、缩放、旋转等操作。
+- 必须要在硬件加速的窗口中使用，占用内存比SurfaceView高，5.0以前在主线程渲染，5.0后有单独的渲染线程。
+
+ SurfaceView本质上是控制一个Surface对象，操作的单位不是纹理而是一个GraphicBuffer对象，其宽高不会和View的绘制进行同步，而是跟着Surface每一次刷新之后回调设置的。
+
+ SurfaceView有自己的Surface，在WMS中有对应的WindowState，在SurfaceFlinger中有Layer。
+ - 可以在独立的线程中进行绘制，不影响主线程
+ - 使用双缓冲机制
+ - Surface不在View hierachy中，不能平移、缩放等，不受View属性控制。
+ - SurfaceView不能嵌套使用
+
+
  # 17. Android SurfaceView的双缓存机制是什么样的？
+双缓存技术需要两个图形缓存区，前端缓冲区对应屏幕正在显示的内容，后端缓存区是接下来要渲染的图形缓冲区。
+- surfaceHolder.lockCanvas()获得的缓存区是后端缓冲区。
+- surfaceHolder.unlockCanvasAndPost()将后端缓冲区与前端缓冲区交换。
+  
+SurfaceView支持局部更新，通过lockCanvas(Rect dirty)来指定获取画布的区域和大小。画布以外的地方会将现在屏幕上的内容复制过来，以保持与屏幕一直。画布以内的区域则保持原画布内容。
+
+注意：
+- lockCanvas从缓冲区拿画布时是根据LRU策略来存取的。
+- 使用holder.lockCanvas(rect)函数获取的画布区域在通过holder.unlockCanvasAndPost(canvas)提交到屏幕时，指定区域内的内容是我们自己绘图的结果，指定区域外的内容是从屏幕上复制过来的，与当前屏幕保持一致。
+- 为了防止画布以内的缓冲画布本身的图像与所画内容产生冲突，在对画布以内的区域作画时，建议先清空画布。
+
  # 18. Android SurfaceFlinger 原理是什么？
  # 19. Android 自定义View怎么实现？Canvas和Paint的使用方法？
  # 20. Android 的动画都有哪些，实现原理是什么？
@@ -3881,7 +3937,7 @@ LeakCanary工作步骤：
 3. Analyzing the heap (分析堆内存)
 4. Categorizing leaks (对泄漏分类)
 
-# Detecting retained objects
+## Detecting retained objects
 LeakCanary依赖Android的lifecycle来自动监测activities和fragments的destroyed方法调用时应该被垃圾收集器回收的情况。
 这些要销毁的对象会被传给ObjectWatcher,ObjectWatcher持有这些对象的weak references。
 LeakCanary可以自动检测以下对象：
@@ -3894,13 +3950,13 @@ LeakCanary可以自动检测以下对象：
 AppWatcher.object.watch(myDetachedView, "View was detached")
 
 如果ObjectWatcher持有的weakreference在运行gc后5秒没有被清除，这个被观察的对象仍然存活，那么可能存在内存泄漏。
-# Dumping the heap
+## Dumping the heap
 当保留的对象个数超过一定的阈值，LeakCanary会把java的堆内存dump到一个.hprof文件中
-# Analyzing the heap
+## Analyzing the heap
 LeakCanary会使用Shark来解析hprof文件，定位存活的对象。
 Shark是一个kotlin library，Shark为LeakCanary2提供内存分析器。
 对于每一个retained对象，LeakCanary会寻找这个对象的引用路径，查看是哪里的引用阻止了其被回收。
-# Categorizing leaks
+## Categorizing leaks
 LeakCanary 会把找到的泄漏分为两类：自身应用的和三方库的。
 
 
