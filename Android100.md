@@ -3602,6 +3602,34 @@ View getViewForPosition(int position, boolean dryRun) {
 
  # 29. Android ViewPager的加载机制与优化？
  # 30. Android Jetpack组件都有哪些？分别实现了哪些事情？
+ ![](images/AndroidJetPack图.png)
+ ## Foundation
+ AndroidKTX: 优化了供Kotlin使用的Jetpack和Android平台API。
+ MultiDex: 为多Dex文件应用提供支持
+ ## Architecture
+ DataBinding: 以声明方式将可观察数据绑定到界面元素，通常和ViewModel配合使用。
+ Lifecycle: 用于管理Activity和Fragment生命周期，可以生成更易于维护的轻量级代码
+ LiveData: 在底层数据库更改时通知视图。他是一个可观察的数据持有者，LiveData是有生命周期感知的。
+ Navigation: 处理应用内导航
+ Paging: 可以帮助开发者一次加载和显示小块数据，按需加载部分数据可减少网络带宽和系统资源的使用。
+ Room: 友好、流畅的访问SQLite数据库，在SQLite基础上提供了一个抽象层，允许更强大的数据库访问。采用注解的方式。
+ ViewModel: 以生命周期的方式管理界面相关数据，通常和DataBinding配合使用。
+ WorkManager: 管理android的后台作业，即便应用退出或设备重新启动也可以运行可延迟的异步任务。实现原理是广播和数据库。
+ - workManager初始化时创建了Room; 
+ - 创建了任务池 WorkManagerTaskExecutor;
+ - 创建了一个新的进程processor
+ - internalInit完成一些参数的传递，检测被停止的事情
+
+ workManager将新的任务加入到任务队列中去执行，执行的时候检查一下约束是否满足。
+ ## UI
+ Fragment :组件化界面的基本单位
+ ...
+ ## Behavior
+ CameraX: 简化相机工作
+ DownloadManager: 处理长时间运行的Http下载系统服务。
+ 权限: 用于检查和请求应用权限的兼容性API
+ ...
+
  # 31. Android 如何处理滑动冲突的？
  # 32. Android 如何处理崩溃？如何捕获异常？
  # 33. Android 如何进行性能调优？都做过哪些事情？
