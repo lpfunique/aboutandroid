@@ -3604,6 +3604,11 @@ vectorDrawables.useSupportLibrary = true
  # 51. Android Systrace 和 TraceView 工具， StrictMode 严苛模式？
  # 52. Android 内存抖动的原因是什么？Profile检测工具、Mat大对象与泄露检测？
  # 53. Serializable和parcelable区别是什么？
+ - Serializable属于Java自带的，表示一个对象可以转换成可存储或可传输的状态，序列化后的对象可以在网络上进行传输，也可以存储在本地。Serializable本质上是使用了反射，序列化过程比较慢。
+   - 静态成员变量不属于类，不会参与序列化过程
+   - 用transient修饰的成员变量不参与序列化过程
+   - 通过重写writeObject()和readObject()方法可以重写系统默认的序列化和反序列化过程。
+ - Parcelable属于Android专用，不过不同于Serializable,Parcelable实现的原理是将一个完整的对象进行分解。如果仅在内存中使用时，比如在activity/service之间进行对象的传递，使用parcelable性能要高很多，因为Serializable在序列化时会产生大量的临时变量，从而引起频繁的GC。
  # 54. EventBus的原理是什么？
  # 55. 如何理解依赖注入？原理是什么？
  # 56. Flutter 的渲染机制是怎样的？
