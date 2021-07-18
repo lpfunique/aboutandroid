@@ -3163,6 +3163,7 @@ binder_ioctl主要负责处理用户空间传递的ioctl指令
 ![](image/../images/Binder驱动核心结构体.png)
 
 ## Binder驱动 总结
+
 Binder驱动程序设备文件的几个基础操作
 - binder_init : 创建Binder驱动相关的文件
 - binder_open : 打开binder设备文件，为当前进程创建binder_proc，可以理解为binder驱动上下文
@@ -3179,6 +3180,7 @@ Binder驱动程序设备文件的几个基础操作
   - BINDER_WRITE_READ : 数据的读写
   - BINDER_SET_CONTEXT_MGR : 注册Binder上下文的管理者（ServiceManager干的事）
 
+// https://blog.csdn.net/u013309870/article/details/105328743
 # 8. Android 匿名共享内存
 
 >Ashmem匿名共享内存是Android的Linux内核实现的一个驱动，它以驱动程序的形式实现在内核空间，用于进程间数据共享。
@@ -3604,11 +3606,16 @@ vectorDrawables.useSupportLibrary = true
  # 51. Android Systrace 和 TraceView 工具， StrictMode 严苛模式？
  # 52. Android 内存抖动的原因是什么？Profile检测工具、Mat大对象与泄露检测？
  # 53. Serializable和parcelable区别是什么？
- - Serializable属于Java自带的，表示一个对象可以转换成可存储或可传输的状态，序列化后的对象可以在网络上进行传输，也可以存储在本地。Serializable本质上是使用了反射，序列化过程比较慢。
+ - Serializable属于Java自带的，表示一个对象可以转换成可存储或可传输的状态，序列化后的对象可以在网络上进行传输，也可以存储在本地。Serializable本质上是使用了反射，序列化过程比较慢。Serializable使用I/O读写存储在硬盘上。
    - 静态成员变量不属于类，不会参与序列化过程
    - 用transient修饰的成员变量不参与序列化过程
    - 通过重写writeObject()和readObject()方法可以重写系统默认的序列化和反序列化过程。
- - Parcelable属于Android专用，不过不同于Serializable,Parcelable实现的原理是将一个完整的对象进行分解。如果仅在内存中使用时，比如在activity/service之间进行对象的传递，使用parcelable性能要高很多，因为Serializable在序列化时会产生大量的临时变量，从而引起频繁的GC。
+ - Parcelable属于Android专用，不过不同于Serializable,Parcelable实现的原理是将一个完整的对象进行封装和解封。Parcelable是直接在内存中读写的。如果仅在内存中使用时，比如在activity/service之间进行对象的传递，使用parcelable性能要高很多，因为Serializable在序列化时会产生大量的临时变量，从而引起频繁的GC。
+  
+ 两个Activity之间传递对象还需要注意什么?
+ 要注意对象的大小。Intent中Bundle是使用Binder机制进行数据传送的，能使用的Binder的缓冲区是有大小限制的.一个进程默认有16个Binder线程。
+ 如何查看手机的Binder缓冲区大小呢？？？
+
  # 54. EventBus的原理是什么？
  # 55. 如何理解依赖注入？原理是什么？
  # 56. Flutter 的渲染机制是怎样的？
