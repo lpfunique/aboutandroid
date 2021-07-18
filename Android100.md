@@ -3631,6 +3631,76 @@ View getViewForPosition(int position, boolean dryRun) {
  ...
 
  # 31. Android 如何处理滑动冲突的？
+
+ Android事件传递在应用内容主要方法有：
+ ViewGroup中有以下三种方法，View没有onInterceptTouchEvent
+ - dispatchTouchEvent
+   - 返回true, 自己直接消耗，子节点不会继续传递事件，连自己的onInterceptTouchEvent和onTouch都不走。
+   - 返回false,若非根节点，则进入其父节点的Touch事件，否则只会执行根节点的dispatchTouchEvent。
+   - 返回super.dispatchTouchEvent(ev), 对于ViewGroup来说才能进入onInterceptTouchEvent来选择是否拦截对于子节点事件的传递。
+  
+ - onInterceptTouchEvent
+   - 返回true : 拦截, 子View接收不到任何事件。
+   - 返回false: 不拦截
+
+ - onTouchEvent
+   - 返回true : 消耗此事件，onTouch在由下向上的传递过程也就因此阻断，事件结束了。
+   - 返回false: 不消耗此事件，事件未结束，还需要调用ViewGroup或者Activity的onTouchEvent
+
+ 注意：
+ - 在ViewGroup中onInterceptTouchEvent返回false,那么事件继续向下传递，如果没有子view处理这个时间，即子view的onTouchEvent返回false，则最后还是由ViewGroup去处理这个事件，也就是执行自己的onTouchEvent事件
+ - onTouch调用前会自动调用onInterceptTouchEvent，如果onInterceptTouchEvent返回false，则不会调用onTouchEvent，返回true，则调用onTouchEvent。
+
+
+ 滑动冲突主要分为「同方向」和「不同方向」的滑动冲突。
+ 解决滑动冲突的关键就是明确告接收Touch的View是否需要拦截此次事件。
+ ## 从外部拦截
+ 正常情况下，父控件会优先接收到Touch事件。在onInterceptTouch的根据条件判断。
+ ```Java
+ override fun onInterceptTouchEvent(ev: MotionEvent?): Boolean {
+        var resume = false
+        
+        when(ev?.action){
+            MotionEvent.ACTION_DOWN -> {
+                resume = false
+            }
+            MotionEvent.ACTION_MOVE -> {
+                if (...){
+                    resume = false
+                }else{
+                    resume = true
+                }
+            }
+            ...
+        }
+        
+        return resume
+    }
+ ```
+ ## 从内部拦截
+ 从内部拦截，需要调用子View.getParent().requestDisallowInterceptTouchEvent(true) 来影响外部父控件的事件接收。
+ ```Java
+         doRequestData.setOnTouchListener(object:View.OnTouchListener{
+            override fun onTouch(v: View?, event: MotionEvent?): Boolean {
+                // 传入true，则parent不拦截
+                doRequestData.parent.requestDisallowInterceptTouchEvent(true)
+                when(event?.action){
+                    MotionEvent.ACTION_DOWN -> {}
+                    MotionEvent.ACTION_MOVE -> {
+                        if(...){
+                            // 传入false，parent进行拦截
+                            doRequestData.parent.requestDisallowInterceptTouchEvent(false)
+                        } else {
+                            doRequestData.parent.requestDisallowInterceptTouchEvent(true)
+                        }
+                    }
+                    ...
+                }
+                return false
+            }
+        })
+ ```
+
  # 32. Android 如何处理崩溃？如何捕获异常？
  # 33. Android 如何进行性能调优？都做过哪些事情？
  # 34. Android 如何进行电量优化？Doze & Standby & Batter Historian &JobScheduler/WorkManager?
