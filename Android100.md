@@ -3180,6 +3180,11 @@ Binder驱动程序设备文件的几个基础操作
   - BINDER_WRITE_READ : 数据的读写
   - BINDER_SET_CONTEXT_MGR : 注册Binder上下文的管理者（ServiceManager干的事）
 
+### 一次完成的Binder IPC通信过程是怎样的？
+- Binder驱动在内核空间创建一个数据接收缓存区
+- 在内核空间开辟一块内核缓冲区，建立「内核缓冲区」和「数据接收缓冲区」之间的映射关系，以及内核中「数据接收缓冲区」和「接收进程用户空间地址」的映射关系。
+- 发送方进程通过系统调用copyFromUser()将数据copy到内核中的「内核缓冲区」，由于「内核缓冲区」和「接收进程的用户空间」存在内存映射，也就相当于把数据发送到了接收进程的用户空间，这样就完成了一次进程间通信过程。
+- ![](images/BinderIPC一次通信过程.jpg)
 // https://blog.csdn.net/u013309870/article/details/105328743
 # 8. Android 匿名共享内存
 
