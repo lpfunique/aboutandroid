@@ -3525,6 +3525,81 @@ SurfaceView支持局部更新，通过lockCanvas(Rect dirty)来指定获取画�
  # 26. Android 如何实现一个图片加载框架？Glide的原理是什么？
  # 27. Android 网络请求是怎么实现的？OkHttp的原理是什么？
  # 28. Android RecyclerView的缓存机制是怎样的？
+ RecyclerView 会将测量onMeasure和布局onLayout的工作委托给LayoutManager来执行，不同的layoutManager会有不同的布局显示。
+
+缓存复用是RV中非常重要的机制，主要实现了ViewHolder的缓存以及复用。
+Recycler类是RV的内部类，主要用来缓存屏幕内ViewHolder以及部分屏幕外ViewHolder。
+```Java
+ public final class Recycler {
+
+        // 第一级缓存，mAttachedScrap/mChangedScrap
+        final ArrayList<ViewHolder> mAttachedScrap = new ArrayList<>();
+        ArrayList<ViewHolder> mChangedScrap = null;
+
+        // 第二级缓存，mCachedViews
+        final ArrayList<ViewHolder> mCachedViews = new ArrayList<ViewHolder>();
+
+        private final List<ViewHolder>
+                mUnmodifiableAttachedScrap = Collections.unmodifiableList(mAttachedScrap);
+
+        private int mRequestedCacheMax = DEFAULT_CACHE_SIZE;
+        int mViewCacheMax = DEFAULT_CACHE_SIZE;
+
+        // 第四季缓存，RecyclerViewPool
+        RecycledViewPool mRecyclerPool;
+
+        // 第三级缓存，ViewCacheExtension
+        private ViewCacheExtension mViewCacheExtension;
+
+        static final int DEFAULT_CACHE_SIZE = 2;
+
+        ....
+ }
+```
+
+## 一级缓存，mAttachedScrap/ mChangedScrap
+两个ArrayList,主要用来缓存屏幕内的ViewHolder,比如列表下拉刷新时，实际上我们调用notifyXXX方法时，就会向这两个列表进行填充，将旧ViewHolder缓存起来。
+## 二级缓存，mCachedViews
+用来缓存移除屏幕之外的ViewHolder,默认情况下缓存个数为2，不过可以通过setViewCacheSize来修改缓存容量，如果mCachedViews容量已满，则会根据FIFO的规则将旧ViewHolder抛弃，然后添加新的ViewHolder。
+通常刚移除屏幕的ViewHolder可能接下来马上使用，所以RV不会立即将其置为无效ViewHolder，而是将他们保存在cache中，但不能将所有移除屏幕的ViewHolder都视为无效ViewHolder，所以它的默认容量只有2个。
+## 三级缓存，ViewCacheExtension
+```Java
+public abstract static class ViewCacheExtension {
+        @Nullable
+        public abstract View getViewForPositionAndType(@NonNull Recycler recycler, int position,int type);
+    }
+```
+开发人员可以通过集成ViewCacheExtension并复写getViewForPositionAndType方法来实现自己的缓存机制。
+## 四级缓存，RecyclerViewPool
+RecycledViewPool同样是用来缓存屏幕外的ViewHolder,当mCachedViews中的个数已满，则将从mCachedViews中淘汰出来的ViewHolder会先缓存到RecyclerViewPool中。ViewHolder在被缓存到RecycledViewPool时，会将内部的数据清理，因此从RecyclerViewPool中取出来的ViewHolder需要重新调用onBindViewHolder绑定数据。
+
+RecyclerViewPool还有一个重要功能：
+多个Rv可以共享一个RecyclerViewPool，RecyclerViewPool是根据type来获取ViewHolder的，每个type默认最大缓存5个，因此多个Rv共享RecyclerViewPool时，需要确保共享的RecyclerView使用的Adapter是同一个或viewType不会冲突。
+
+## RV是如何从缓冲中获取ViewHolder的？
+在onLayout阶段，通过在layoutChunk方法中调用layoutState.next方法拿到某个itemView,然后添加到Rv中。
+
+```Java 
+// LayoutState.next方法
+View next(RecyclerView.Recycler recycler) {
+    final View view = recycler.getViewForPosition(mCurrentPosition);
+    mCurrentPosition += mItemDirection;
+    return view;
+}
+
+// RecyclerView中
+@NonNull
+public View getViewForPosition(int position) {
+    return getViewForPosition(position, false);
+}
+
+View getViewForPosition(int position, boolean dryRun) {
+    return tryGetViewHolderForPositionByDeadline(position, dryRun, FOREVER_NS).itemView;
+}
+
+```
+在tryGetViewHolderForPositionByDeadline方法中从四级缓存中查找，如果么有找到则会通过createViewHolder创建一个新的ViewHolder。
+
  # 29. Android ViewPager的加载机制与优化？
  # 30. Android Jetpack组件都有哪些？分别实现了哪些事情？
  # 31. Android 如何处理滑动冲突的？
