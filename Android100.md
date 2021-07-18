@@ -3849,6 +3849,27 @@ https中的加密是使用服务器的非对称密钥对一个随机生成的对
  # 84. 项目中遇到过哪些问题？
  # 85. 如何进行换肤操作？
  # 86. 如何避免内存泄露？都有哪些场景？使用哪些工具？
+Java中内存泄漏指的是存在一些被分配的对象，它们是可达的，但是程序以后都不会再使用这些对象。这些对象就可以判断为内存泄漏。
+在Android中内存泄漏的原因很简单：生命周期长的对象持有生命周期短的对象的引用。
+
+以下几种场景会导致内存泄漏：
+- 单例中持有context对象，使用时context传入activity之类的就会内存泄漏
+- 非静态内部类会造成内存泄漏
+- 外部类中持有非静态内部类的静态对象
+- Handler或Runnable作为非静态内部类（Handler和Runnable都有延时操作）
+- BroadcastReceiver未取消注册
+- InputStream未关闭
+- mvp模式下activity退出时，presenter仍持有activity的引用
+
+```Java
+@Override protected void onDestroy() { 
+    super.onDestroy(); 
+    presenter.detachView(); 
+} 
+public void detachView() { 
+    view = null; 
+}
+```
 
  # 87. LeakCanary的原理是什么？
 以LeakCanary 2.7 为例来讲解：
