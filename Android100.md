@@ -3705,6 +3705,63 @@ View getViewForPosition(int position, boolean dryRun) {
  # 33. Android 如何进行性能调优？都做过哪些事情？
  # 34. Android 如何进行电量优化？Doze & Standby & Batter Historian &JobScheduler/WorkManager?
  # 35. Android Activity 和 Fragment的生命周期？
+ ## Activity生命周期：
+ onCreate()->onStart()->onResume()->onPause()->onStop()->onDestroy()
+ onStop()->onRestart()->onStart()
+ onStop()->kill process -> onCreate()
+ ![](images/Activity生命周期.png)
+
+ onSaveInstanceState():
+ 用户显式关闭Activity时或者其他情况下调用finish时系统不会调用此方法。
+ onRestoreInstanceState():
+ 与onCreate方法都会收到相同的恢复Bundle
+
+ ## Fragment生命周期：
+ onCreate()-> onCreateView() -> onViewCreated() ->onViewStateRestored() -> onStart() -> onResume() -> onPause() -> onStop() -> onSaveInstanceState() -> onDestoryView() -> onDestroy()
+ ![](image/../images/Fragment生命周期.png)
+
+ ## Lifecycle.State: 5个状态
+ - DESTROYED    : 对应Activity的onDestory
+ - INITIALIZED  : 对应Activity的onCreate之前
+ - CREATED      : 对应Activity的onCreate和onStop之间
+ - STARTED      : 对应Activity的onStart和onResume之间
+ - RESUMED      : 对应Activity的onResume
+
+ ## Lifecycle.Event: 7个事件
+ - ON_CREATE
+ - ON_START
+ - ON_RESUME
+ - ON_PAUSE
+ - ON_STOP
+ - ON_DESTROY
+ - ON_ANY   : 匹配所有事件
+
+ ![](images/Lifecycle状态切换.png)
+
+ ## Lifecycle的介绍
+ // https://www.jianshu.com/p/2c9bcbf092bc
+ - getLifecycle()返回的是一个LifecycleRegistry对象。
+ ```Java
+    public class SupportActivity extends Activity implements LifecycleOwner {
+        @Override
+        protected void onCreate(@Nullable Bundle savedInstanceState) {
+            super.onCreate(savedInstanceState);
+            /** ReportFragment无界面，在ReportFragment的生命周期函数内调用了LifecycleRegistry.handleLifecycleEvent()来分发生命周期事件，在其内部调用moveToState()方法，改变State值就会调用Lifecycle.onStateChanged()方法将Event分发到LifecycleObserver中。**/
+            ReportFragment.injectIfNeededIn(this);
+        }
+    }
+ ```
+ AppCompatActivity是通过ReportFragment将事件分发给LifecycleRegistry的。
+ 如果不继承AppCompatActivity，还可以通过LifecycleDispatcher和ProcessLifecycleOwner来分发生命周期事件。
+
+ ### LifecycleDispatcher 生命周期分发者
+ 通过注册Application.registerActivityLifecycleCallbacks来监听Activity生命周期。
+ ### ProcessLifecycleOwner 线程生命周期拥有者
+ 用来监听Application的生命周期，它只会分发一次ON_CREATE事件，不会分发ON_DESTROY事件。
+
+ Lifecycle会自动在我们的AndroidManifest中添加一个ContentProvider,用于初始化ProcessLifecycleOwner和LifecycleDispatcher，不需要我们在Application显式调用了。
+
+
  # 36. Android ContentProvider原理是什么？
  # 37. Android Service的启动方法和区别？
  # 38. Android Activity 的启动模式是怎样的？
