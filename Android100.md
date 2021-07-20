@@ -784,7 +784,7 @@ void Looper::wake() {
 在enqueueMessage() 和 next()方法执行时可能会发生阻塞，但是没有发生ANR，原因就在于两个native方法，nativeWake 和 nativePollOnce。
 它的本质就是Linux的管道。管道，其本质是也是文件，但又和普通的文件会有所不同：管道缓冲区大小一般为1页，即4K字节。管道分为读端和写端，读端负责从管道拿数据，当数据为空时则阻塞；写端向管道写数据，当管道缓存区满时则阻塞。
 
-当调用nativePollOnce方法时，主线程会释放CPU资源进入休眠状态，知道下调消息到达或者有事务发生，通过往pipe管道写端写入数据来唤醒主线程工作，采用epoll机制。
+当调用nativePollOnce方法时，主线程会释放CPU资源进入休眠状态，直到下次消息到达或者有事务发生，通过往pipe管道写端写入数据来唤醒主线程工作，采用epoll机制。
 
 写了这么多，参考下面这张图来看一下过程
 ![](./images/NativeMessageQueue.png)
