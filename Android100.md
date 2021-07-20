@@ -3764,7 +3764,58 @@ View getViewForPosition(int position, boolean dryRun) {
 
  # 36. Android ContentProvider原理是什么？
  # 37. Android Service的启动方法和区别？
+ - startService : 主要用于启动一个服务执行后台任务，不进行通信，停止服务使用stopService或stopSelf()。多次startService只会触发一次onCreate方法，但每次都会执行startCommand回调。
+ - bindService : 该方法启动的服务可以进行通信，停止服务使用unbindService。
+   - bindService启动的服务和调用者之间是典型的client-server模式。
+   - client可以通过IBinder接口获取Service实例。
+   - bindService启动服务的生命周期与client相关，client销毁，client自动与service解除绑定，client也可调用unbindService与Service解除绑定。
+ - startService同时也调用bindService，停止服务需要使用stopService和unbindService。
+  
+ ## Service启动过程
+ ![](images/Service启动方式.png)
+
+ ## Service的保活：
+ - onStartCommand方法中，返回值设置为START_STICKY，一共有四种状态
+   - START_STICKY : 如果系统在 onStartCommand() 返回后终止服务，则其会重建服务并调用 onStartCommand()，但不会重新传递最后一个 Intent。相反，除非有挂起 Intent 要启动服务，否则系统会调用包含空 Intent 的 onStartCommand()。在此情况下，系统会传递这些 Intent。此常量适用于不执行命令、但无限期运行并等待作业的媒体播放器（或类似服务）。
+   - START_NOT_STICKY : 如果系统在 onStartCommand() 返回后终止服务，则除非有待传递的挂起 Intent，否则系统不会重建服务。这是最安全的选项，可以避免在不必要时以及应用能够轻松重启所有未完成的作业时运行服务。
+   - START_REDELIVER_INTENT: 如果系统在 onStartCommand() 返回后终止服务，则其会重建服务，并通过传递给服务的最后一个 Intent 调用 onStartCommand()。所有挂起 Intent 均依次传递。此常量适用于主动执行应立即恢复的作业（例如下载文件）的服务。
+   - START_STICKY_COMPATIBILITY: START_STICKY的兼容版
+ - 提高Service的优先级,最高优先级1000
+ - 提升Service进程的优先级，Android进程分级 6级
+   - 前台进程：foreground_app
+   - 可见进程：visible_app
+   - 次要进程：secondary_server
+   - 后台进程：hidden_app
+   - 内容供应节点：content_provider
+   - 空进程：empty_app
+
+ ## IntentService
+ Service的子类，其使用工作线程逐一处理所有启动请求。如果不要求服务同时处理多个请求，选择IntentService是很好的。实现onHandleIntent(),该方法会接受每个启动请求的intent,以便执行后台工作。
+
+ IntentService工作流程：
+ - 创建默认的工作线程，用于在应用的主线程外传递给onStartCommand()的所有Intent
+ - 创建工作队列，用于将intent逐一传递给onHandleIntent()实现，不必担心多线程问题。
+ - 在处理完所有启动请求后停止服务，不必调用stopSelf()。
+ - 提供onBind的默认实现（返回null）
+ - 提供onStartCommand的默认实现，可将Intent依次发送到工作队列和onHandleIntent()实现。
+ - 使用时需要实现onHandleIntent()方法。这个方法执行完，IntentService会停止服务。
+  
+ ## JobIntentService
+ - 使用enqueueWork来将新的任务入队列
+ - 使用onHandleWork来实现处理逻辑
+ ## JobScheduler
+
+ // https://www.jianshu.com/p/f9712b470b42
  # 38. Android Activity 的启动模式是怎样的？
+ ## Standard 
+ 每次都创建一个新的Activity，压入启动此Activity的那个Activity所在栈中
+ ## SingleTop
+ 如果栈顶是要启动的Activity，则复用，否则创建新的Activity入栈
+ ## SingleTask
+ 如果栈内存在该Activity实例，则将该实例上边的Activity出栈，该实例置于栈顶，如果不存在则创建
+ ## SingleInstance
+ 新开一个任务栈，该栈内只存在当前实例
+
  # 39. Android Notification 的原理是什么？
  # 40. Android Mvp Mvvm Mvc 区别是什么？
 
