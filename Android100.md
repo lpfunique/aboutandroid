@@ -3907,6 +3907,36 @@ vectorDrawables.useSupportLibrary = true
  # 57. Flutter 的核心思想是什么？
  # 58. Gradle 核心思想，自定一个AndroidStudio插件？
  # 59. Dalivk和Art虚拟机的区别是什么？
+ dvm执行的是.dex文件，jvm执行的是.class文件。多个class文件转换成dex文件会引发一些问题：
+ - 方法数受限，可能会超过65535，所以引出MultiDex文件
+ - class文件去冗余，class文件存在很多冗余信息，dex工具会去除冗余信息（多个class中的字符串常量合并为一个），并把所有.class文件整合到.dex文件中，减少IO操作，提高了类的查找速度。
+
+ jvm是基于虚拟栈的虚拟机，而dvm是基于寄存器的虚拟机。不过这些寄存器不是直接操作硬件的寄存器，而是在内存中模拟一组寄存器。Android字节码（smali）更多的二地址指令和三地址指令。
+ ![](images/JVM和DVM比较.png)
+ - dvm基于寄存器，存取速度比栈快的多。在jvm虚拟机上运行程序时，需要频繁的从栈上读取写入数据，这个过程需要更多的指令分配和内存访问此数，会消耗很多的cpu时间。
+ - dvm的指令数小，jvm需要多长指令而dvm只能只需要一条指令。
+
+ ## Dvm虚拟机堆结构：
+ Zygote堆和Active堆
+ Zygote进程是在系统启动时产生，它会完成虚拟机的初始化、库的加载、预置类库的加载和初始化等，当系统需要一个新的应用进程时，通过复制自己，最快速提供一个进程，另外对于一些只读库，所有虚拟机实例和Zygote共享一块内存区域，大大节省了内存开销。
+ Zygote堆是Zygote进程在启动的时候预加载的类、资源和对象，除此之外所有的对象都是存储在Active堆中。
+ Android通过fork方法创建新的应用进程，为了尽量避免父进程和子进程之间的数据拷贝，fork采用写时拷贝技术（COW），简单讲就是fork的时候不会立即拷贝父进程数据到子进程中，而是在子进程或父进程堆内存进行写操作时才对内存内容进行赋值，dvm的zygote堆存放的预加载类都是Android核心类和java运行时库，大多数时候父进程和子进程共享这块内存区域。
+
+ dvm虚拟机的堆最初只有一个，当Zygote进程在fork第一个应用进程前，会将已经使用的内存划分一部分，把还没有使用的堆内存划分成另一部分，前者称为Zygote堆、后者称为Active堆，以后无论是Zygote进程还是应用进程，当它们需要分配对象的时候，都在Active堆上进行，这样就可以使Zygote堆尽可能少的被执行写操作，因而就可以减少执行写时拷贝的操作时间。通过垃圾回收重点是对Active堆进行回收，为了更好管理堆内存，dvm创建一个cardTable、两个Heap Bitmap 和一个MarkStack数据结构。
+ ![](images/DVM堆内存结构.png)
+
+ - CardTable: 用于Dvm的并发GC，当第一次进行垃圾标记后，记录垃圾信息
+ - Heap Bitmap: 一个用来记录上次GC存活的对象，一个用来记录这次GC存活的对象
+ - Mark Stask: Dvm运行时堆使用标记清除算法进行GC，MarkStack就是GC的标记阶段使用的，它用来遍历存活的对象。
+
+ ## Art虚拟机堆结构：
+ Art虚拟机直接执行本地机器码，而Dvm运行的是dex字节码需要通过解释器执行。Art在安装应用的时候就把dex中的字节码被编译成本地机器码，之后每次打开应用，执行的都是本地机器码。
+ Art在GC上不像Dvm仅有一种垃圾回收算法（改良版的标记清除算法），Art在不同情况下有不同的回收算法，比如Alloc内存不够时会采用非并发GC，而在Alloc后发现内存达到一定阈值又会出发并发GC。
+ ![](images/ART堆内存结构.png)
+ ZygoteSpace和ImageSpace是进程间共享的。
+ - ImageSpace: 用来存放一些预加载的类
+ - LargeObjectSpace: 用来分配一些大对象
+
  # 60. HashMap的原理是什么？为什么不安全？ 
  1.7版本：
  Table数组+Entry链表
